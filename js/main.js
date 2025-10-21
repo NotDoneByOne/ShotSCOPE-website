@@ -12,31 +12,35 @@ class ShotScopeWebsite {
         this.setupCounters();
         this.setupScrollEffects();
         this.setupIntersectionObserver();
-        this.setupScreenshotCarousel();
-        this.setupLogoAnimations();
+        this.setupCarousel();
+        //this.setupSplashInteractions();
     }
 
-    setupLogoAnimations() {
-        const heroLogo = document.querySelector('.hero-logo');
-        const logoDisplay = document.querySelector('.logo-display');
+    // Add this method to the ShotScopeWebsite class
+    setupSplashInteractions() {
+        const splashMockup = document.querySelector('.splash-mockup');
+        const loadingProgress = document.querySelector('.loading-progress');
 
-        if (heroLogo && logoDisplay) {
-            // Простой hover эффект
-            logoDisplay.addEventListener('mouseenter', () => {
-                heroLogo.style.transform = 'scale(1.05)';
-            });
-
-            logoDisplay.addEventListener('mouseleave', () => {
-                heroLogo.style.transform = 'scale(1)';
-            });
-
-            // Клик для перезапуска анимации
-            logoDisplay.addEventListener('click', () => {
-                heroLogo.style.animation = 'none';
+        if (splashMockup && loadingProgress) {
+            // Restart loading animation on click
+            splashMockup.addEventListener('click', () => {
+                loadingProgress.style.animation = 'none';
                 setTimeout(() => {
-                    heroLogo.style.animation = 'logoFloatStrict 6s ease-in-out infinite';
+                    loadingProgress.style.animation = 'loading 2s ease-in-out infinite';
                 }, 10);
             });
+
+            // Simulate loading states
+            let loadState = 0;
+            const simulateLoad = () => {
+                if (loadState < 3) {
+                    loadState++;
+                    setTimeout(simulateLoad, 1500);
+                }
+            };
+
+            // Start simulation after initial load
+            setTimeout(simulateLoad, 3000);
         }
     }
 
@@ -131,14 +135,20 @@ class ShotScopeWebsite {
 
         const animateCounter = (counter) => {
             const target = +counter.getAttribute('data-target');
-            const count = +counter.innerText;
+            const count = +counter.innerText.replace('%', '').replace('+', '');
             const increment = target / speed;
 
             if (count < target) {
                 counter.innerText = Math.ceil(count + increment);
                 setTimeout(() => animateCounter(counter), 1);
             } else {
-                counter.innerText = target + (counter.getAttribute('data-target') === '99.8' ? '%' : '+');
+                let finalValue = target;
+                if (counter.getAttribute('data-target') === '99.8') {
+                    finalValue = target + '%';
+                } else if (counter.getAttribute('data-target') === '500' || counter.getAttribute('data-target') === '15') {
+                    finalValue = target + '+';
+                }
+                counter.innerText = finalValue;
             }
         };
 
@@ -157,20 +167,51 @@ class ShotScopeWebsite {
         });
     }
 
-    setupScreenshotCarousel() {
-        const screenshots = document.querySelectorAll('.screenshot-auto-switch');
-        if (screenshots.length > 0) {
-            let currentIndex = 0;
+    // Carousel
+    setupCarousel() {
+        const track = document.querySelector('.carousel-track');
+        const slides = document.querySelectorAll('.carousel-slide');
+        const dots = document.querySelectorAll('.carousel-dots .dot');
+        const prevBtn = document.querySelector('.carousel-prev');
+        const nextBtn = document.querySelector('.carousel-next');
 
-            setInterval(() => {
-                screenshots.forEach((screenshot, index) => {
-                    screenshot.style.opacity = index === currentIndex ? '1' : '0.3';
-                    screenshot.style.transform = index === currentIndex ? 'scale(1.05)' : 'scale(0.95)';
-                });
+        if (!track || !slides.length) return;
 
-                currentIndex = (currentIndex + 1) % screenshots.length;
-            }, 4000);
-        }
+        let currentIndex = 0;
+        const slideCount = slides.length;
+
+        const updateCarousel = () => {
+            track.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+            // Update dots
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentIndex);
+            });
+        };
+
+        const nextSlide = () => {
+            currentIndex = (currentIndex + 1) % slideCount;
+            updateCarousel();
+        };
+
+        const prevSlide = () => {
+            currentIndex = (currentIndex - 1 + slideCount) % slideCount;
+            updateCarousel();
+        };
+
+        // Event listeners
+        if (nextBtn) nextBtn.addEventListener('click', nextSlide);
+        if (prevBtn) prevBtn.addEventListener('click', prevSlide);
+
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                currentIndex = index;
+                updateCarousel();
+            });
+        });
+
+        // Auto-advance
+        setInterval(nextSlide, 5000);
     }
 
     // Scroll effects
@@ -202,7 +243,7 @@ class ShotScopeWebsite {
         });
     }
 
-    // Intersection Observer for scroll animations
+    // Update the setupIntersectionObserver function to include changelog animations
     setupIntersectionObserver() {
         const observerOptions = {
             threshold: 0.1,
@@ -216,12 +257,20 @@ class ShotScopeWebsite {
 
                     // Add staggered animation for grids
                     if (entry.target.classList.contains('features-grid') ||
-                        entry.target.classList.contains('stats-grid') ||
-                        entry.target.classList.contains('team-grid')) {
+                        entry.target.classList.contains('experts-grid') ||
+                        entry.target.classList.contains('changes-grid')) {
                         const children = entry.target.children;
                         Array.from(children).forEach((child, index) => {
                             child.style.animationDelay = `${index * 0.1}s`;
                             child.classList.add('animate-slide-in-up');
+                        });
+                    }
+
+                    // Special animation for timeline items
+                    if (entry.target.classList.contains('timeline-item')) {
+                        const changeTypes = entry.target.querySelectorAll('.change-type');
+                        changeTypes.forEach((type, index) => {
+                            type.style.animationDelay = `${index * 0.2}s`;
                         });
                     }
                 }
@@ -230,7 +279,7 @@ class ShotScopeWebsite {
 
         // Observe all sections and cards
         const sections = document.querySelectorAll('section');
-        const cards = document.querySelectorAll('.feature-card, .stat-card, .team-card');
+        const cards = document.querySelectorAll('.feature-card, .expert-card, .developer-card, .version-card, .timeline-item');
 
         sections.forEach(section => observer.observe(section));
         cards.forEach(card => observer.observe(card));
@@ -249,21 +298,9 @@ class ShotScopeWebsite {
         };
     }
 
-    // Form handling (if needed in future)
-    setupForms() {
-        const forms = document.querySelectorAll('form');
-        forms.forEach(form => {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                // Add form submission logic here
-            });
-        });
-    }
-
     // Error handling
     handleError(error) {
         console.error('ShotSCOPE Website Error:', error);
-        // Add error reporting logic here
     }
 }
 
@@ -296,7 +333,7 @@ style.textContent = `
     }
     
     .header-scrolled {
-        background: rgba(15, 15, 26, 0.98) !important;
+        background: rgba(255, 255, 255, 0.98) !important;
         backdrop-filter: blur(20px) !important;
     }
     
@@ -311,7 +348,7 @@ style.textContent = `
             left: 0;
             width: 100%;
             height: calc(100vh - 70px);
-            background: var(--background-dark);
+            background: var(--background);
             transform: translateX(-100%);
             transition: transform 0.3s ease;
             z-index: 999;
@@ -330,15 +367,3 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-
-
-
-// Export for potential module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ShotScopeWebsite;
-}
-
-
-
-
-
